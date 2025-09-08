@@ -142,7 +142,7 @@ app.get('/api/subscriptions', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
-    const subscriptions = await youtubeService.getSubscriptions(req.user.access_token);
+    const subscriptions = await youtubeService.getSubscriptions(req.user.access_token, req.user.refresh_token);
     res.json(subscriptions);
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
