@@ -1,0 +1,9 @@
+schema: 1
+story: '2.0'
+story_title: 'Improve Developer Run Instructions and Troubleshooting'
+gate: PASS
+status_reason: 'The README.md is clear, comprehensive, and meets all acceptance criteria. No issues found.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-09-05T00:00:00Z'
+top_issues: []
+waiver: { active: false }
