@@ -8,9 +8,11 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
+  const [savedItems, setSavedItems] = useState(new Set()); // NEW: Track saved items
 
   useEffect(() => {
     fetchDashboardData();
+    loadSavedItems(); // NEW: Load saved items on mount
   }, []);
 
   const fetchDashboardData = async () => {
@@ -27,6 +29,38 @@ function Dashboard() {
     }
   };
 
+  // NEW: Load saved items from localStorage
+  const loadSavedItems = () => {
+    const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+    setSavedItems(new Set(saved.map(item => item.video_id)));
+  };
+
+  // NEW: Handle save/unsave functionality
+  const handleSave = (summary) => {
+    const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+    const isAlreadySaved = saved.some(item => item.video_id === summary.video_id);
+    
+    if (isAlreadySaved) {
+      // Remove from saved
+      const updated = saved.filter(item => item.video_id !== summary.video_id);
+      localStorage.setItem('savedVideos', JSON.stringify(updated));
+      setSavedItems(new Set(updated.map(item => item.video_id)));
+    } else {
+      // Add to saved
+      const newSaved = {
+        video_id: summary.video_id || summary.id, // Handle both possible ID fields
+        title: summary.title,
+        channel_name: summary.channel_name,
+        summary: summary.summary,
+        thumbnail: summary.thumbnail,
+        saved_at: new Date().toISOString()
+      };
+      saved.push(newSaved);
+      localStorage.setItem('savedVideos', JSON.stringify(saved));
+      setSavedItems(new Set(saved.map(item => item.video_id)));
+    }
+  };
+
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
@@ -36,7 +70,6 @@ function Dashboard() {
       const response = await api.get('/api/refresh-videos');
       setMessage(response.message || 'Videos refreshed successfully!');
       
-      // Re-fetch dashboard data to show new summaries
       await fetchDashboardData();
     } catch (err) {
       setError('Failed to refresh videos. Please try again.');
@@ -74,7 +107,6 @@ function Dashboard() {
         </button>
       </div>
 
-      {/* Stats display */}
       {stats && (
         <div style={{ 
           backgroundColor: '#f8f9fa', 
@@ -90,7 +122,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Messages */}
       {message && (
         <div style={{ 
           backgroundColor: '#d4edda', 
@@ -115,7 +146,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Summaries list */}
       {summaries.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
           <h3>No video summaries yet</h3>
@@ -126,50 +156,71 @@ function Dashboard() {
         <div>
           <h2>Latest Video Summaries ({summaries.length})</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {summaries.map((summary, index) => (
-              <div 
-                key={summary.id || index}
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  backgroundColor: 'white'
-                }}
-              >
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
-                    {summary.title}
-                  </h3>
-                  <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>
-                    <span><strong>Channel:</strong> {summary.channel_name}</span>
-                    {summary.created_at && (
-                      <span style={{ marginLeft: '1rem' }}>
-                        <strong>Added:</strong> {new Date(summary.created_at).toLocaleDateString()}
-                      </span>
+            {summaries.map((summary, index) => {
+              const videoId = summary.video_id || summary.id;
+              const isSaved = savedItems.has(videoId);
+              
+              return (
+                <div 
+                  key={summary.id || index}
+                  style={{
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+                      {summary.title}
+                    </h3>
+                    <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>
+                      <span><strong>Channel:</strong> {summary.channel_name}</span>
+                      {summary.created_at && (
+                        <span style={{ marginLeft: '1rem' }}>
+                          <strong>Added:</strong> {new Date(summary.created_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div style={{ lineHeight: '1.6', color: '#444' }}>
+                    {summary.summary || 'Summary not available'}
+                  </div>
+                  
+                  <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {summary.thumbnail && (
+                      <img 
+                        src={summary.thumbnail} 
+                        alt="Video thumbnail"
+                        style={{ 
+                          maxWidth: '120px', 
+                          height: 'auto', 
+                          borderRadius: '4px',
+                          border: '1px solid #ddd'
+                        }}
+                      />
                     )}
-                  </div>
-                </div>
-                
-                <div style={{ lineHeight: '1.6', color: '#444' }}>
-                  {summary.summary || 'Summary not available'}
-                </div>
-                
-                {summary.thumbnail && (
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <img 
-                      src={summary.thumbnail} 
-                      alt="Video thumbnail"
-                      style={{ 
-                        maxWidth: '120px', 
-                        height: 'auto', 
+                    
+                    {/* NEW: Save Button */}
+                    <button
+                      onClick={() => handleSave(summary)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: isSaved ? '#28a745' : '#6c757d',
+                        color: 'white',
+                        border: 'none',
                         borderRadius: '4px',
-                        border: '1px solid #ddd'
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
                       }}
-                    />
+                    >
+                      {isSaved ? '✓ Saved' : 'Save for Later'}
+                    </button>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
