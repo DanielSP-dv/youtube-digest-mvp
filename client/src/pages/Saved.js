@@ -2,31 +2,65 @@ import React, { useState, useEffect } from 'react';
 
 function Saved() {
   const [savedVideos, setSavedVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState(new Set());
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     loadSavedVideos();
   }, []);
 
   const loadSavedVideos = () => {
-    const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
-    // Sort by saved date, newest first
-    saved.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
-    setSavedVideos(saved);
+    setLoading(true);
+    // Simulate a small delay to show loading state (localStorage is instant)
+    setTimeout(() => {
+      const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+      // Sort by saved date, newest first
+      saved.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+      setSavedVideos(saved);
+      setLoading(false);
+    }, 300);
   };
 
   const handleRemove = (videoId) => {
-    const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
-    const updated = saved.filter(item => item.video_id !== videoId);
-    localStorage.setItem('savedVideos', JSON.stringify(updated));
-    setSavedVideos(updated);
+    setRemoving(prev => new Set([...prev, videoId]));
+    
+    // Simulate a small delay to show loading state
+    setTimeout(() => {
+      const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+      const updated = saved.filter(item => item.video_id !== videoId);
+      localStorage.setItem('savedVideos', JSON.stringify(updated));
+      setSavedVideos(updated);
+      setRemoving(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(videoId);
+        return newSet;
+      });
+    }, 200);
   };
 
   const clearAll = () => {
     if (window.confirm('Are you sure you want to clear all saved videos?')) {
-      localStorage.removeItem('savedVideos');
-      setSavedVideos([]);
+      setClearing(true);
+      
+      // Simulate a small delay to show loading state
+      setTimeout(() => {
+        localStorage.removeItem('savedVideos');
+        setSavedVideos([]);
+        setClearing(false);
+      }, 300);
     }
   };
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem' }}>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Loading your saved videos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem' }}>
@@ -35,16 +69,18 @@ function Saved() {
         {savedVideos.length > 0 && (
           <button
             onClick={clearAll}
+            disabled={clearing}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: '#dc3545',
+              backgroundColor: clearing ? '#6c757d' : '#dc3545',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: clearing ? 'not-allowed' : 'pointer',
+              opacity: clearing ? 0.6 : 1
             }}
           >
-            Clear All
+            {clearing ? 'Clearing...' : 'Clear All'}
           </button>
         )}
       </div>
@@ -107,17 +143,19 @@ function Saved() {
                   
                   <button
                     onClick={() => handleRemove(video.video_id)}
+                    disabled={removing.has(video.video_id)}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#dc3545',
+                      backgroundColor: removing.has(video.video_id) ? '#6c757d' : '#dc3545',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
+                      cursor: removing.has(video.video_id) ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      opacity: removing.has(video.video_id) ? 0.6 : 1
                     }}
                   >
-                    Remove from Saved
+                    {removing.has(video.video_id) ? 'Removing...' : 'Remove from Saved'}
                   </button>
                 </div>
               </div>
