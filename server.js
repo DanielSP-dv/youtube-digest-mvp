@@ -111,9 +111,7 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
+// Remove the basic route - let the catch-all route handle it
 
 app.get('/dashboard', (req, res) => {
   if (!req.user) {
