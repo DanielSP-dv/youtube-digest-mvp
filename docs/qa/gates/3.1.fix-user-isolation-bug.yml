@@ -1,0 +1,9 @@
+schema: 1
+story: "3.1"
+story_title: "Fix User Isolation Bug in Video Summaries"
+gate: PASS
+status_reason: "The implementation is excellent and meets all acceptance criteria."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-09-09T12:00:00Z"
+top_issues: []
+waiver: { active: false }

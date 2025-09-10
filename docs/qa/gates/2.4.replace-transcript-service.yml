@@ -1,0 +1,9 @@
+schema: 1
+story: "2.4"
+story_title: "Replace Transcript Service with Supadata"
+gate: PASS
+status_reason: "The implementation correctly uses the Supadata API and meets all acceptance criteria."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-09-09T12:00:00Z"
+top_issues: []
+waiver: { active: false }

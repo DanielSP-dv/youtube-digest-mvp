@@ -13,6 +13,16 @@
       "playwright": {
         "command": "npx",
         "args": ["@executeautomation/playwright-mcp-server"]
+      },
+      "railway": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@railway/mcp-server"
+        ],
+        "env": {
+          "RAILWAY_API_TOKEN": "0f37523c-a477-489d-9ae0-d7c0b811a3ba"
+        }
       }
   }
 }
