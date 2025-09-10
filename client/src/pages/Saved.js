@@ -12,10 +12,8 @@ function Saved() {
 
   const loadSavedVideos = () => {
     setLoading(true);
-    // Simulate a small delay to show loading state (localStorage is instant)
     setTimeout(() => {
       const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
-      // Sort by saved date, newest first
       saved.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
       setSavedVideos(saved);
       setLoading(false);
@@ -24,8 +22,6 @@ function Saved() {
 
   const handleRemove = (videoId) => {
     setRemoving(prev => new Set([...prev, videoId]));
-    
-    // Simulate a small delay to show loading state
     setTimeout(() => {
       const saved = JSON.parse(localStorage.getItem('savedVideos') || '[]');
       const updated = saved.filter(item => item.video_id !== videoId);
@@ -42,8 +38,6 @@ function Saved() {
   const clearAll = () => {
     if (window.confirm('Are you sure you want to clear all saved videos?')) {
       setClearing(true);
-      
-      // Simulate a small delay to show loading state
       setTimeout(() => {
         localStorage.removeItem('savedVideos');
         setSavedVideos([]);
@@ -53,32 +47,19 @@ function Saved() {
   };
 
   if (loading) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem' }}>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <p>Loading your saved videos...</p>
-        </div>
-      </div>
-    );
+    return <div className="loading-container">Loading your saved videos...</div>;
   }
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1>Saved Videos</h1>
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-title">Saved Videos</h1>
         {savedVideos.length > 0 && (
           <button
             onClick={clearAll}
             disabled={clearing}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: clearing ? '#6c757d' : '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: clearing ? 'not-allowed' : 'pointer',
-              opacity: clearing ? 0.6 : 1
-            }}
+            className="btn btn-danger"
+            style={{ opacity: clearing ? 0.6 : 1 }}
           >
             {clearing ? 'Clearing...' : 'Clear All'}
           </button>
@@ -86,32 +67,24 @@ function Saved() {
       </div>
 
       {savedVideos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+        <div className="empty-state">
           <h3>No saved videos yet</h3>
           <p>Videos you save from your dashboard will appear here.</p>
           <p>Go to your <a href="/dashboard">Dashboard</a> to save videos for later.</p>
         </div>
       ) : (
         <div>
-          <p style={{ color: '#666', marginBottom: '1rem' }}>
+          <p className="text-muted mb-3">
             You have {savedVideos.length} saved video{savedVideos.length !== 1 ? 's' : ''}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {savedVideos.map((video) => (
-              <div
-                key={video.video_id}
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  backgroundColor: 'white'
-                }}
-              >
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+              <div key={video.video_id} className="card">
+                <div className="card-header">
+                  <h3 className="card-title">
                     {video.title}
                   </h3>
-                  <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>
+                  <div className="card-meta">
                     <span><strong>Channel:</strong> {video.channel_name}</span>
                     {video.saved_at && (
                       <span style={{ marginLeft: '1rem' }}>
@@ -122,38 +95,25 @@ function Saved() {
                 </div>
 
                 {video.summary && (
-                  <div style={{ lineHeight: '1.6', color: '#444', marginBottom: '1rem' }}>
+                  <div className="card-content">
                     {video.summary}
                   </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div className="card-footer">
                   {video.thumbnail && (
                     <img
                       src={video.thumbnail}
                       alt="Video thumbnail"
-                      style={{
-                        maxWidth: '120px',
-                        height: 'auto',
-                        borderRadius: '4px',
-                        border: '1px solid #ddd'
-                      }}
+                      className="video-thumbnail"
                     />
                   )}
                   
                   <button
                     onClick={() => handleRemove(video.video_id)}
                     disabled={removing.has(video.video_id)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: removing.has(video.video_id) ? '#6c757d' : '#dc3545',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: removing.has(video.video_id) ? 'not-allowed' : 'pointer',
-                      fontSize: '0.875rem',
-                      opacity: removing.has(video.video_id) ? 0.6 : 1
-                    }}
+                    className="btn btn-danger"
+                    style={{ opacity: removing.has(video.video_id) ? 0.6 : 1 }}
                   >
                     {removing.has(video.video_id) ? 'Removing...' : 'Remove from Saved'}
                   </button>

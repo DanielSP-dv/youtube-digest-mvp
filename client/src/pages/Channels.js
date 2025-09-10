@@ -52,29 +52,36 @@ function Channels() {
     }
   };
 
-  if (loading) return <p>Loading your channels...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return <div className="loading-container">Loading your channels...</div>;
+  if (error) return <div className="page-container"><div className="alert alert-error">{error}</div></div>;
 
   return (
-    <div>
-      <h1>Select Channels to Monitor</h1>
-      <p>You can select up to 10 channels.</p>
-      <button onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving...' : 'Save Selections'}
-      </button>
-      <div style={{ marginTop: '20px' }}>
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-title">Select Channels to Monitor</h1>
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary">
+          {saving ? 'Saving...' : 'Save Selections'}
+        </button>
+      </div>
+      
+      <p className="text-muted mb-3">
+        You can select up to 10 channels. Selected: {selectedChannels.size}/10
+      </p>
+      
+      <div className="channel-list">
         {subscriptions.map(sub => (
-          <div key={sub.channelId}>
+          <div key={sub.channelId} className="channel-item">
             <input
               type="checkbox"
               id={sub.channelId}
+              className="channel-checkbox"
               checked={selectedChannels.has(sub.channelId)}
               onChange={() => handleChannelSelect(sub.channelId)}
               disabled={!selectedChannels.has(sub.channelId) && selectedChannels.size >= 10}
             />
-            <label htmlFor={sub.channelId}>
-              <img src={sub.channelThumbnail} alt="" style={{ width: '24px', height: '24px', marginRight: '10px', verticalAlign: 'middle' }} />
-              {sub.channelName}
+            <label htmlFor={sub.channelId} className="channel-label">
+              <img src={sub.channelThumbnail} alt="" className="channel-thumbnail" />
+              <span>{sub.channelName}</span>
             </label>
           </div>
         ))}
