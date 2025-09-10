@@ -374,7 +374,15 @@ app.get('/auth/logout', (req, res, next) => {
 
 // Catch-all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build/index.html'));
+  const buildPath = path.join(__dirname, 'client/build/index.html');
+  const fallbackPath = path.join(__dirname, 'public/index.html');
+  
+  // Try to serve the React build first, fallback to simple HTML
+  if (require('fs').existsSync(buildPath)) {
+    res.sendFile(buildPath);
+  } else {
+    res.sendFile(fallbackPath);
+  }
 });
 
 app.listen(port, () => {
