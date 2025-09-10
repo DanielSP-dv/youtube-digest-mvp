@@ -51,7 +51,7 @@ const port = process.env.PORT || 5001;
 
 // CORS setup
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
 }));
 
@@ -61,7 +61,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Must be false for http://localhost
+    secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
     httpOnly: true,
     sameSite: 'lax', // Important for cross-port
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
@@ -367,7 +367,7 @@ app.get('/auth/status', (req, res) => {
 app.get('/auth/logout', (req, res, next) => {
   req.logout(function(err) {
     if (err) { return next(err); }
-    res.redirect('http://localhost:3000/');
+    res.redirect(process.env.CLIENT_URL || 'http://localhost:3000/');
   });
 });
 
