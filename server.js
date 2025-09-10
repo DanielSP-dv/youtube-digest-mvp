@@ -124,7 +124,8 @@ app.get('/test', (req, res) => {
     buildExists: fs.existsSync(buildPath),
     clientExists: fs.existsSync(clientPath),
     clientContents: fs.existsSync(clientPath) ? fs.readdirSync(clientPath) : 'client dir not found',
-    appContents: fs.readdirSync(__dirname)
+    appContents: fs.readdirSync(__dirname),
+    deployment: 'v2.0'
   });
 });
 
