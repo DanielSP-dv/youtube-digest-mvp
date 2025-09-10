@@ -111,7 +111,15 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-// Remove the basic route - let the catch-all route handle it
+// Test route to verify server is working
+app.get('/test', (req, res) => {
+  res.json({ 
+    status: 'Server is working!', 
+    timestamp: new Date().toISOString(),
+    buildPath: path.join(__dirname, 'client/build/index.html'),
+    buildExists: require('fs').existsSync(path.join(__dirname, 'client/build/index.html'))
+  });
+});
 
 app.get('/dashboard', (req, res) => {
   if (!req.user) {
