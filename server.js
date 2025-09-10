@@ -113,11 +113,18 @@ passport.use(new GoogleStrategy({
 
 // Test route to verify server is working
 app.get('/test', (req, res) => {
+  const fs = require('fs');
+  const buildPath = path.join(__dirname, 'client/build/index.html');
+  const clientPath = path.join(__dirname, 'client');
+  
   res.json({ 
     status: 'Server is working!', 
     timestamp: new Date().toISOString(),
-    buildPath: path.join(__dirname, 'client/build/index.html'),
-    buildExists: require('fs').existsSync(path.join(__dirname, 'client/build/index.html'))
+    buildPath: buildPath,
+    buildExists: fs.existsSync(buildPath),
+    clientExists: fs.existsSync(clientPath),
+    clientContents: fs.existsSync(clientPath) ? fs.readdirSync(clientPath) : 'client dir not found',
+    appContents: fs.readdirSync(__dirname)
   });
 });
 
