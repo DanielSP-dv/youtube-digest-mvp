@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// --- Manual .env parsing ---
+// --- Manual .env parsing (optional for local development) ---
 try {
   const envPath = path.resolve(__dirname, '.env');
   const envFileContent = fs.readFileSync(envPath, 'utf8');
@@ -17,8 +17,12 @@ try {
     
     process.env[key] = value;
   }
+  console.log('✅ Loaded .env file for local development');
 } catch (err) {
-  console.error('Error manually parsing .env file:', err);
+  // Silently ignore .env file not found (Railway provides env vars directly)
+  if (err.code !== 'ENOENT') {
+    console.error('Error manually parsing .env file:', err);
+  }
 }
 // --- End of manual .env parsing ---
 
