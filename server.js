@@ -117,15 +117,22 @@ app.get('/test', (req, res) => {
   const buildPath = path.join(__dirname, 'client/build/index.html');
   const clientPath = path.join(__dirname, 'client');
   
+  const buildDirPath = path.join(__dirname, 'client/build');
+  const buildDirExists = fs.existsSync(buildDirPath);
+  const buildDirContents = buildDirExists ? fs.readdirSync(buildDirPath) : 'build dir not found';
+  
   res.json({ 
     status: 'Server is working!', 
     timestamp: new Date().toISOString(),
     buildPath: buildPath,
     buildExists: fs.existsSync(buildPath),
+    buildDirPath: buildDirPath,
+    buildDirExists: buildDirExists,
+    buildDirContents: buildDirContents,
     clientExists: fs.existsSync(clientPath),
     clientContents: fs.existsSync(clientPath) ? fs.readdirSync(clientPath) : 'client dir not found',
     appContents: fs.readdirSync(__dirname),
-    deployment: 'v2.1'
+    deployment: 'v2.2'
   });
 });
 
