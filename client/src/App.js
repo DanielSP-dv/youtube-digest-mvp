@@ -9,8 +9,11 @@ const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Use environment variable or fallback to localhost for development
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+
   useEffect(() => {
-    fetch('http://localhost:5001/auth/status', {
+    fetch(`${API_BASE_URL}/auth/status`, {
       credentials: 'include'
     })
     .then(res => res.json())
@@ -25,10 +28,10 @@ const useAuth = () => {
       setUser(null);
       setLoading(false);
     });
-  }, []);
+  }, [API_BASE_URL]);
 
-  const login = () => window.location.href = 'http://localhost:5001/auth/google';
-  const logout = () => window.location.href = 'http://localhost:5001/auth/logout';
+  const login = () => window.location.href = `${API_BASE_URL}/auth/google`;
+  const logout = () => window.location.href = `${API_BASE_URL}/auth/logout`;
 
   return { user, loading, login, logout };
 };
