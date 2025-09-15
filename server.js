@@ -132,15 +132,6 @@ app.get('/', (req, res) => {
   renderIndexWithFreshAssets(req, res);
 });
 
-// spa catch all for client side routes, only for html requests
-app.get('*', (req, res) => {
-  const accept = req.headers.accept || '';
-  if (accept.includes('text/html')) {
-    res.setHeader('Cache-Control', 'no-store');
-    return renderIndexWithFreshAssets(req, res);
-  }
-  res.status(404).send('Not found');
-});
 
 const db = require('./db');
 
@@ -457,14 +448,12 @@ app.get('/auth/logout', (req, res, next) => {
 // Catch-all handler: send back React's index.html file for any non-API routes
 // This must be placed AFTER all API routes to avoid intercepting them
 app.get('*', (req, res) => {
-  const buildPath = path.join(__dirname, 'client/build/index.html');
-  
-  // Only serve React build if it exists
-  if (require('fs').existsSync(buildPath)) {
-    res.sendFile(buildPath);
-  } else {
-    res.status(404).send('React build not found. Please run: cd client && npm run build');
+  const accept = req.headers.accept || '';
+  if (accept.includes('text/html')) {
+    res.setHeader('Cache-Control', 'no-store');
+    return renderIndexWithFreshAssets(req, res);
   }
+  res.status(404).send('Not found');
 });
 
 app.listen(port, () => {
