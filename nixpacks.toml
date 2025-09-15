@@ -6,9 +6,11 @@ cmds = ["npm ci", "cd client && npm ci"]
 
 [phases.build]
 cmds = [
-  "rm -rf client/build client/node_modules/.cache",
+  "rm -rf client/build client/node_modules/.cache client/.eslintcache",
   "cd client && npm ci",
-  "cd client && npm run build"
+  "cd client && npm run build",
+  "ls -la client/build/",
+  "ls -la client/build/static/js/"
 ]
 
 [start]
