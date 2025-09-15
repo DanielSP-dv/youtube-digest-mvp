@@ -83,14 +83,6 @@ passport.deserializeUser((user, done) => {
 // Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, 'client/build')));
 
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-  });
-}
-
 const db = require('./db');
 
 passport.use(new GoogleStrategy({
@@ -140,7 +132,7 @@ app.get('/test', (req, res) => {
     clientExists: fs.existsSync(clientPath),
     clientContents: fs.existsSync(clientPath) ? fs.readdirSync(clientPath) : 'client dir not found',
     appContents: fs.readdirSync(__dirname),
-    deployment: 'v2.2'
+    deployment: 'v2.3'
   });
 });
 
@@ -388,18 +380,17 @@ app.get('/auth/logout', (req, res, next) => {
 });
 
 // Catch-all handler: send back React's index.html file for any non-API routes
-// Temporarily commented out to test static file serving
-// app.get('*', (req, res) => {
-//   const buildPath = path.join(__dirname, 'client/build/index.html');
-//   const fallbackPath = path.join(__dirname, 'public/index.html');
-//   
-//   // Try to serve the React build first, fallback to simple HTML
-//   if (require('fs').existsSync(buildPath)) {
-//     res.sendFile(buildPath);
-//   } else {
-//     res.sendFile(fallbackPath);
-//   }
-// });
+// This must be placed AFTER all API routes to avoid intercepting them
+app.get('*', (req, res) => {
+  const buildPath = path.join(__dirname, 'client/build/index.html');
+  
+  // Only serve React build if it exists
+  if (require('fs').existsSync(buildPath)) {
+    res.sendFile(buildPath);
+  } else {
+    res.status(404).send('React build not found. Please run: cd client && npm run build');
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
