@@ -2,19 +2,21 @@
 nixPkgs = ["nodejs_18", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm ci", "cd client && npm ci"]
+cmds = [
+  "npm ci",
+  "cd client && npm ci"
+]
 
 [phases.build]
 cmds = [
-  "rm -rf client/build client/node_modules/.cache client/.eslintcache",
-  "cd client && npm ci",
+  "rm -rf client/build client/node_modules/.cache",
   "cd client && npm run build",
-  "ls -la client/build/",
-  "ls -la client/build/static/js/"
+  "ls -la client/build",
+  "cat client/build/asset-manifest.json || true"
 ]
 
 [start]
-cmd = "npm start"
+cmd = "node server.js"
 
 [variables]
 NODE_ENV = "production"

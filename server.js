@@ -45,7 +45,47 @@ const youtubeService = require('./services/youtube');
 const transcriptService = require('./services/transcript');
 const openaiService = require('./services/openai');
 
+const buildDir = path.join(__dirname, 'client/build');
+const manifestPath = path.join(buildDir, 'asset-manifest.json');
+
+function renderIndexWithFreshAssets(req, res) {
+  try {
+    const htmlPath = path.join(buildDir, 'index.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const mainJs = manifest.files?.['main.js'];
+    const mainCss = manifest.files?.['main.css'];
+
+    if (mainJs) {
+      html = html.replace(/\/static\/js\/main\.[^\"]+\.js/g, mainJs);
+    }
+    if (mainCss) {
+      html = html.replace(/\/static\/css\/main\.[^\"]+\.css/g, mainCss);
+    }
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (e) {
+    res.status(500).send('Failed to render index with fresh assets');
+  }
+}
+
 const app = express();
+
+try {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const js = manifest.files?.['main.js'];
+  const css = manifest.files?.['main.css'];
+  if (js && !fs.existsSync(path.join(buildDir, js.replace('/','')))) {
+    console.error('Manifest main.js missing on disk', js);
+  }
+  if (css && !fs.existsSync(path.join(buildDir, css.replace('/','')))) {
+    console.error('Manifest main.css missing on disk', css);
+  }
+} catch (e) {
+  console.warn('No asset manifest yet, client build may be missing');
+}
 app.use(express.json()); // Middleware to parse JSON bodies
 const port = process.env.PORT || 5001;
 
@@ -80,15 +120,26 @@ passport.deserializeUser((user, done) => {
   done(null, user);
 });
 
-// Serve static files from the React app build directory with explicit /static route
+// serve hashed assets with no fallthrough
 app.use(
   '/static',
-  express.static(path.join(__dirname, 'client/build/static'), { fallthrough: false })
+  express.static(path.join(buildDir, 'static'), { fallthrough: false, maxAge: '1y', immutable: true })
 );
 
-// serve index for the root path
+// serve index with no cache so clients always fetch the latest html
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build/index.html'));
+  res.setHeader('Cache-Control', 'no-store');
+  renderIndexWithFreshAssets(req, res);
+});
+
+// spa catch all for client side routes, only for html requests
+app.get('*', (req, res) => {
+  const accept = req.headers.accept || '';
+  if (accept.includes('text/html')) {
+    res.setHeader('Cache-Control', 'no-store');
+    return renderIndexWithFreshAssets(req, res);
+  }
+  res.status(404).send('Not found');
 });
 
 const db = require('./db');
