@@ -80,8 +80,16 @@ passport.deserializeUser((user, done) => {
   done(null, user);
 });
 
-// Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, 'client/build')));
+// Serve static files from the React app build directory with explicit /static route
+app.use(
+  '/static',
+  express.static(path.join(__dirname, 'client/build/static'), { fallthrough: false })
+);
+
+// serve index for the root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build/index.html'));
+});
 
 const db = require('./db');
 
@@ -121,6 +129,14 @@ app.get('/test', (req, res) => {
   const buildDirExists = fs.existsSync(buildDirPath);
   const buildDirContents = buildDirExists ? fs.readdirSync(buildDirPath) : 'build dir not found';
   
+  // Check static subdirectories
+  const jsDir = path.join(__dirname, 'client/build/static/js');
+  const cssDir = path.join(__dirname, 'client/build/static/css');
+  const jsDirExists = fs.existsSync(jsDir);
+  const cssDirExists = fs.existsSync(cssDir);
+  const jsFiles = jsDirExists ? fs.readdirSync(jsDir) : 'js dir not found';
+  const cssFiles = cssDirExists ? fs.readdirSync(cssDir) : 'css dir not found';
+  
   res.json({ 
     status: 'Server is working!', 
     timestamp: new Date().toISOString(),
@@ -132,7 +148,15 @@ app.get('/test', (req, res) => {
     clientExists: fs.existsSync(clientPath),
     clientContents: fs.existsSync(clientPath) ? fs.readdirSync(clientPath) : 'client dir not found',
     appContents: fs.readdirSync(__dirname),
-    deployment: 'v2.3'
+    staticFiles: {
+      jsDir: jsDir,
+      jsDirExists: jsDirExists,
+      jsFiles: jsFiles,
+      cssDir: cssDir,
+      cssDirExists: cssDirExists,
+      cssFiles: cssFiles
+    },
+    deployment: 'v2.4'
   });
 });
 
