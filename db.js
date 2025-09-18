@@ -1,7 +1,8 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = process.env.DATABASE_URL || path.join(process.cwd(), 'database.sqlite'); // use /data in Railway
+const dbPath = (process.env.DATABASE_URL || 'file:database.sqlite').replace(/^file:/, '');
+console.log(`Attempting to connect to database at: ${dbPath}`);
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
