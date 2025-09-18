@@ -1,10 +1,12 @@
+# nixpacks.toml
 [phases.setup]
-nixPkgs = ["nodejs_18", "npm-9_x"]
+nixPkgs = ["nodejs_20", "npm-10_x"]
 
 [phases.install]
 cmds = [
   "npm ci",
-  "cd client && npm ci"
+  # use npm install in client unless you guarantee a client lockfile
+  "cd client && npm install"
 ]
 
 [phases.build]
@@ -20,3 +22,5 @@ cmd = "node server.js"
 
 [variables]
 NODE_ENV = "production"
+# Optionally bake this for CRA. Replace with your Railway URL.
+# REACT_APP_API_URL = "https://<your-api-or-app-domain>"

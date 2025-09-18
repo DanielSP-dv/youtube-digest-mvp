@@ -73,6 +73,15 @@ function renderIndexWithFreshAssets(req, res) {
 
 const app = express();
 
+// Demo mode, skip sessions and OAuth
+const DEMO_MODE = process.env.DEMO_MODE === 'true';
+if (DEMO_MODE) {
+  app.use((req, res, next) => {
+    req.user = { id: 1, email: 'demo@demo', name: 'Demo User', access_token: null, refresh_token: null };
+    next();
+  });
+}
+
 try {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const js = manifest.files?.['main.js'];
@@ -89,36 +98,38 @@ try {
 app.use(express.json()); // Middleware to parse JSON bodies
 const port = process.env.PORT || 5001;
 
-// CORS setup
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
-}));
+if (!DEMO_MODE) {
+  // CORS setup
+  app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+  }));
 
-// Session setup
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
-    httpOnly: true,
-    sameSite: 'lax', // Important for cross-port
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
+  // Session setup
+  app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Must be 'none' for cross-domain cookies
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
 
-// Passport setup
-app.use(passport.initialize());
-app.use(passport.session());
+  // Passport setup
+  app.use(passport.initialize());
+  app.use(passport.session());
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
+  passport.serializeUser((user, done) => {
+    done(null, user);
+  });
 
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
+  passport.deserializeUser((user, done) => {
+    done(null, user);
+  });
+}
 
 // serve hashed assets with no fallthrough
 app.use(

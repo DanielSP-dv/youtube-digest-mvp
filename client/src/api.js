@@ -1,5 +1,5 @@
 // Use environment variable or fallback to localhost for development
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 const api = {
   get: async (url) => {

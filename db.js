@@ -1,11 +1,12 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Create database connection
-const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'));
+const dbPath = process.env.DATABASE_URL || path.join(process.cwd(), 'database.sqlite'); // use /data in Railway
+const db = new sqlite3.Database(dbPath);
 
-// Initialize database tables
 db.serialize(() => {
+  db.run('PRAGMA foreign_keys = ON');
+
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,18 +31,25 @@ db.serialize(() => {
     )
   `);
 
+  // add user_id and drop the UNIQUE on video_id alone
   db.run(`
     CREATE TABLE IF NOT EXISTS video_summaries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      video_id TEXT UNIQUE NOT NULL,
+      user_id INTEGER NOT NULL,
+      video_id TEXT NOT NULL,
       channel_id TEXT NOT NULL,
       title TEXT NOT NULL,
       thumbnail TEXT,
       published_at DATETIME,
       summary TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
+
+  db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_vs_user_video ON video_summaries(user_id, video_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_vs_user ON video_summaries(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_vs_channel ON video_summaries(channel_id)');
 });
 
 // Convert callback-based sqlite3 to Promise-based functions
