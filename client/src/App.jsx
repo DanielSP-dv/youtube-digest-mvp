@@ -93,21 +93,24 @@ function Navigation({ user, logout, login }) {
 function App() {
   const { user, loading, login, logout } = useAuth();
 
-  if (loading) {
-    return <div className="loading-container">Loading...</div>;
-  }
-
   return (
     <Router>
       <div>
+        {/* Navigation is always present, but its internal state depends on user */}
         <Navigation user={user} logout={logout} login={login} />
         <main>
-          <Routes>
-            <Route path="/" element={<Landing user={user} login={login} />} />
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
-            <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
-            <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
-          </Routes>
+          {/* While loading, show a loading indicator and nothing else */}
+          {loading ? (
+            <div className="loading-container">Loading...</div>
+          ) : (
+            /* Once loading is false, render routes based on user state */
+            <Routes>
+              <Route path="/" element={<Landing user={user} login={login} />} />
+              <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
+              <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
+              <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
+            </Routes>
+          )}
         </main>
       </div>
     </Router>
