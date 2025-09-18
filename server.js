@@ -46,7 +46,7 @@ const transcriptService = require('./services/transcript');
 const openaiService = require('./services/openai');
 
 const buildDir = path.join(__dirname, 'client/dist');
-const manifestPath = path.join(buildDir, 'asset-manifest.json');
+const manifestPath = path.join(buildDir, 'manifest.json');
 
 function renderIndexWithFreshAssets(req, res) {
   try {
