@@ -104,9 +104,9 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<Landing user={user} login={login} />} />
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
-            <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
-            <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
+            <Route path="/dashboard" element={loading ? <div>Loading...</div> : (user ? <Dashboard /> : <Landing user={user} login={login} />)} />
+            <Route path="/channels" element={loading ? <div>Loading...</div> : (user ? <Channels /> : <Landing user={user} login={login} />)} />
+            <Route path="/saved" element={loading ? <div>Loading...</div> : (user ? <Saved /> : <Landing user={user} login={login} />)} />
           </Routes>
         </main>
       </div>
