@@ -9,10 +9,10 @@ const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || ''; // same origin
+  const API_BASE_URL = import.meta.env.VITE_API_URL || ''; // same origin
 
   useEffect(() => {
-    if (process.env.REACT_APP_DEMO === 'true') {
+    if (import.meta.env.VITE_DEMO === 'true') {
       setUser({ email: 'demo@demo' });
       setLoading(false);
       return;
@@ -35,11 +35,11 @@ const useAuth = () => {
   }, [API_BASE_URL]);
 
   const login = () => {
-    if (process.env.REACT_APP_DEMO === 'true') return;
+    if (import.meta.env.VITE_DEMO === 'true') return;
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
   const logout = () => {
-    if (process.env.REACT_APP_DEMO === 'true') return;
+    if (import.meta.env.VITE_DEMO === 'true') return;
     window.location.href = `${API_BASE_URL}/auth/logout`;
   };
 
@@ -104,9 +104,9 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<Landing user={user} login={login} />} />
-            <Route path="/dashboard" element={loading ? <div>Loading...</div> : (user ? <Dashboard /> : <Landing user={user} login={login} />)} />
-            <Route path="/channels" element={loading ? <div>Loading...</div> : (user ? <Channels /> : <Landing user={user} login={login} />)} />
-            <Route path="/saved" element={loading ? <div>Loading...</div> : (user ? <Saved /> : <Landing user={user} login={login} />)} />
+            <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
+            <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
+            <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
           </Routes>
         </main>
       </div>

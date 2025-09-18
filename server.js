@@ -45,7 +45,7 @@ const youtubeService = require('./services/youtube');
 const transcriptService = require('./services/transcript');
 const openaiService = require('./services/openai');
 
-const buildDir = path.join(__dirname, 'client/build');
+const buildDir = path.join(__dirname, 'client/dist');
 const manifestPath = path.join(buildDir, 'asset-manifest.json');
 
 function renderIndexWithFreshAssets(req, res) {
@@ -175,16 +175,16 @@ passport.use(new GoogleStrategy({
 // Test route to verify server is working
 app.get('/test', (req, res) => {
   const fs = require('fs');
-  const buildPath = path.join(__dirname, 'client/build/index.html');
+  const buildPath = path.join(__dirname, 'client/dist/index.html');
   const clientPath = path.join(__dirname, 'client');
   
-  const buildDirPath = path.join(__dirname, 'client/build');
+  const buildDirPath = path.join(__dirname, 'client/dist');
   const buildDirExists = fs.existsSync(buildDirPath);
   const buildDirContents = buildDirExists ? fs.readdirSync(buildDirPath) : 'build dir not found';
   
   // Check static subdirectories
-  const jsDir = path.join(__dirname, 'client/build/static/js');
-  const cssDir = path.join(__dirname, 'client/build/static/css');
+  const jsDir = path.join(__dirname, 'client/dist/static/js');
+  const cssDir = path.join(__dirname, 'client/dist/static/css');
   const jsDirExists = fs.existsSync(jsDir);
   const cssDirExists = fs.existsSync(cssDir);
   const jsFiles = jsDirExists ? fs.readdirSync(jsDir) : 'js dir not found';

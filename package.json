@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "bash scripts/dev.sh",
-    "build": "cd client && npm ci && npm run build",
+    "build": "cd client && npm install && npm run build",
     "sandbox": "bash scripts/sandbox.sh"
   },
   "dependencies": {

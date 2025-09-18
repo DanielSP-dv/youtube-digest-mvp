@@ -11,10 +11,10 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "rm -rf client/build client/node_modules/.cache",
+  "rm -rf client/dist client/node_modules/.cache",
   "cd client && npm run build",
-  "ls -la client/build",
-  "cat client/build/asset-manifest.json || true"
+  "ls -la client/dist",
+  "cat client/dist/asset-manifest.json || true"
 ]
 
 [start]
