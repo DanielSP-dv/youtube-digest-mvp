@@ -95,29 +95,37 @@ function App() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && window.location.pathname === '/') {
       navigate('/dashboard');
     }
   }, [loading, user, navigate]);
-
-  if (loading) {
-    return <div className="loading-container">Loading...</div>;
-  }
 
   return (
     <div>
       <Navigation user={user} logout={logout} login={login} />
       <main>
-        <Routes>
-          <Route path="/" element={<Landing user={user} login={login} />} />
-          <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
-          <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
-          <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
-        </Routes>
+        {loading ? (
+          <div className="loading-container">Loading...</div>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Landing user={user} login={login} />} />
+            <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
+            <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
+            <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
+          </Routes>
+        )}
       </main>
     </div>
   );
 }
+
+const AppWrapper = () => (
+  <Router>
+    <App />
+  </Router>
+);
+
+export default AppWrapper;
 
 const Root = () => <Router><App /></Router>;
 

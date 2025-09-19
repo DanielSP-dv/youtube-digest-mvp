@@ -26,16 +26,6 @@ try {
 }
 // --- End of manual .env parsing ---
 
-const required = ["CLIENT_URL","SESSION_SECRET","GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","CALLBACK_URL"];
-const missing = required.filter(k => !process.env[k]);
-if (missing.length) {
-  console.error("Missing env:", missing.join(", "));
-  process.exit(1);
-}
-
-console.log('DEBUG: GOOGLE_CLIENT_ID =', process.env.GOOGLE_CLIENT_ID);
-console.log('DEBUG: CLIENT_URL =', process.env.CLIENT_URL);
-
 const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -45,81 +35,38 @@ const youtubeService = require('./services/youtube');
 const transcriptService = require('./services/transcript');
 const openaiService = require('./services/openai');
 
-const buildDir = path.join(__dirname, 'client/dist');
-const manifestPath = path.join(buildDir, 'manifest.json');
-
-function renderIndexWithFreshAssets(req, res) {
-  try {
-    const htmlPath = path.join(buildDir, 'index.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
-
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    const mainJs = manifest.files?.['main.js'];
-    const mainCss = manifest.files?.['main.css'];
-
-    if (mainJs) {
-      html = html.replace(/\/static\/js\/main\.[^\"]+\.js/g, mainJs);
-    }
-    if (mainCss) {
-      html = html.replace(/\/static\/css\/main\.[^\"]+\.css/g, mainCss);
-    }
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(html);
-  } catch (e) {
-    res.status(500).send('Failed to render index with fresh assets');
-  }
-}
-
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', 1); // Mandatory for Railway proxy
 
-// Demo mode, skip sessions and OAuth
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
+
+app.use(express.json()); // Middleware to parse JSON bodies
+
+// Demo mode middleware
 if (DEMO_MODE) {
   app.use((req, res, next) => {
-    req.user = { id: 1, email: 'demo@demo', name: 'Demo User', access_token: null, refresh_token: null };
+    req.user = { id: 1, email: 'demo@demo.com', name: 'Demo User', access_token: null, refresh_token: null };
     next();
   });
-}
-
-try {
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const js = manifest.files?.['main.js'];
-  const css = manifest.files?.['main.css'];
-  if (js && !fs.existsSync(path.join(buildDir, js.replace('/','')))) {
-    console.error('Manifest main.js missing on disk', js);
-  }
-  if (css && !fs.existsSync(path.join(buildDir, css.replace('/','')))) {
-    console.error('Manifest main.css missing on disk', css);
-  }
-} catch (e) {
-  console.warn('No asset manifest yet, client build may be missing');
-}
-app.use(express.json()); // Middleware to parse JSON bodies
-const port = process.env.PORT || 5001;
-
-if (!DEMO_MODE) {
-  // CORS setup
+} else {
+  // Session and Passport setup for real auth
   app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     credentials: true
   }));
 
-  // Session setup
   app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Must be 'none' for cross-domain cookies
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000
     }
   }));
 
-  // Passport setup
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -130,281 +77,53 @@ if (!DEMO_MODE) {
   passport.deserializeUser((user, done) => {
     done(null, user);
   });
+
+  passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.CALLBACK_URL
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await db.findUserByGoogleId(profile.id);
+        if (!user) {
+          user = await db.createUser(profile.id, profile.emails[0].value, profile.displayName, accessToken, refreshToken);
+          console.log('Created new user:', user);
+        } else {
+          await db.updateUserTokens(profile.id, accessToken, refreshToken);
+          user.access_token = accessToken;
+          user.refresh_token = refreshToken;
+          console.log('Found existing user, updated tokens:', user);
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  ));
 }
 
-app.use(express.static(path.join(__dirname, 'client/dist')));
+const db = require('./db');
 
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
-});
-
-// Test route to verify server is working
-app.get('/test', (req, res) => {
-  const fs = require('fs');
-  const buildPath = path.join(__dirname, 'client/dist/index.html');
-  const clientPath = path.join(__dirname, 'client');
-  
-  const buildDirPath = path.join(__dirname, 'client/dist');
-  const buildDirExists = fs.existsSync(buildDirPath);
-  const buildDirContents = buildDirExists ? fs.readdirSync(buildDirPath) : 'build dir not found';
-  
-  // Check static subdirectories
-  const jsDir = path.join(__dirname, 'client/dist/static/js');
-  const cssDir = path.join(__dirname, 'client/dist/static/css');
-  const jsDirExists = fs.existsSync(jsDir);
-  const cssDirExists = fs.existsSync(cssDir);
-  const jsFiles = jsDirExists ? fs.readdirSync(jsDir) : 'js dir not found';
-  const cssFiles = cssDirExists ? fs.readdirSync(cssDir) : 'css dir not found';
-  
-  res.json({ 
-    status: 'Server is working!', 
-    timestamp: new Date().toISOString(),
-    buildPath: buildPath,
-    buildExists: fs.existsSync(buildPath),
-    buildDirPath: buildDirPath,
-    buildDirExists: buildDirExists,
-    buildDirContents: buildDirContents,
-    clientExists: fs.existsSync(clientPath),
-    clientContents: fs.existsSync(clientPath) ? fs.readdirSync(clientPath) : 'client dir not found',
-    appContents: fs.readdirSync(__dirname),
-    staticFiles: {
-      jsDir: jsDir,
-      jsDirExists: jsDirExists,
-      jsFiles: jsFiles,
-      cssDir: cssDir,
-      cssDirExists: cssDirExists,
-      cssFiles: cssFiles
-    },
-    deployment: 'v2.4'
-  });
-});
-
-app.get('/dashboard', (req, res) => {
-  if (!req.user) {
-    return res.redirect('/');
-  }
-  res.send(`<h1>Dashboard</h1><p>Welcome, ${req.user.name}!</p><p>Email: ${req.user.email}</p><a href="/auth/logout">Logout</a>`);
-});
+// --- API ROUTES ---
+// Must be before the static file serving
 
 // Auth routes
 app.get('/auth/google', passport.authenticate('google', { 
-  scope: ['profile', 'email', 'https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube'],
+  scope: ['profile', 'email', 'https://www.googleapis.com/auth/youtube.readonly'],
   accessType: 'offline',
   prompt: 'consent'
 }));
 
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL }), (req, res) => {
-  // Successful authentication, redirect to React frontend
   res.redirect(process.env.CLIENT_URL);
 });
 
-// API routes
-app.get('/api/current_user', (req, res) => {
-  if (!req.user) {
-    return res.status(401).send('Not authenticated');
-  }
-  res.json(req.user);
-});
-
-// Get user's YouTube subscriptions
-app.get('/api/subscriptions', async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const subscriptions = await youtubeService.getSubscriptions(req.user.access_token, req.user.refresh_token);
-    res.json(subscriptions);
-  } catch (error) {
-    console.error('Error fetching subscriptions:', error);
-    res.status(500).json({ error: 'Failed to fetch subscriptions' });
-  }
-});
-
-// Get saved channel selections
-app.get('/api/channels', async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const channels = await db.query(
-      'SELECT * FROM selected_channels WHERE user_id = ?',
-      [req.user.id]
-    );
-    res.json(channels);
-  } catch (error) {
-    console.error('Error fetching channels:', error);
-    res.status(500).json({ error: 'Failed to fetch channels' });
-  }
-});
-
-// Save channel selections
-app.post('/api/channels', async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
-    const { channels } = req.body;
-    if (!Array.isArray(channels) || channels.length > 10) {
-      return res.status(400).json({ error: 'Invalid channel selection' });
-    }
-    
-    // Delete existing selections
-    await db.query('DELETE FROM selected_channels WHERE user_id = ?', [req.user.id]);
-    
-    // Insert new selections
-    for (const channel of channels) {
-      await db.query(
-        'INSERT INTO selected_channels (user_id, channel_id, channel_name, channel_thumbnail) VALUES (?, ?, ?, ?)',
-        [req.user.id, channel.channelId, channel.channelName, channel.channelThumbnail]
-      );
-    }
-    
-    res.json({ success: true, count: channels.length });
-  } catch (error) {
-    console.error('Error saving channels:', error);
-    res.status(500).json({ error: 'Failed to save channels' });
-  }
-});
-
-// New endpoint for Story 2.2: Fetch and Store Video Data
-app.get('/api/refresh-videos', async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // CRITICAL: Remove any hardcoded user override - use actual authenticated user
-    const currentUser = req.user;
-    console.log(`Refreshing videos for user ${currentUser.id} (${currentUser.email})`);
-    
-    // Get ONLY the channels selected by THIS specific user
-    const selectedChannels = await db.query(
-      'SELECT * FROM selected_channels WHERE user_id = ?',
-      [currentUser.id]
-    );
-
-    if (selectedChannels.length === 0) {
-      return res.status(200).json({ 
-        success: true, 
-        message: 'No channels selected for monitoring. Please select channels first.' 
-      });
-    }
-
-    console.log(`User ${currentUser.id} has ${selectedChannels.length} selected channels:`, 
-      selectedChannels.map(c => c.channel_name));
-
-    const allNewVideos = [];
-    for (const channel of selectedChannels) {
-      try {
-        console.log(`Fetching videos for channel: ${channel.channel_name} (${channel.channel_id})`);
-        const latestVideos = await youtubeService.getLatestVideosByChannel(
-          currentUser.access_token,
-          currentUser.refresh_token,
-          channel.channel_id
-        );
-        console.log(`Found ${latestVideos.length} videos for ${channel.channel_name}`);
-        allNewVideos.push(...latestVideos);
-      } catch (error) {
-        console.error(`Error fetching videos for channel ${channel.channel_name}:`, error);
-      }
-    }
-
-    console.log(`Total videos found across all channels: ${allNewVideos.length}`);
-
-    let savedVideosCount = 0;
-    let summarizedVideosCount = 0;
-
-    // Process only 2 videos per call to avoid API limits (temporary)
-    const videosToProcess = allNewVideos.slice(0, 2);
-    console.log(`Processing ${videosToProcess.length} videos...`);
-
-    for (const video of videosToProcess) {
-      try {
-        // Check if this specific user already has this video processed
-        const existingVideo = await db.query(
-          'SELECT video_id FROM video_summaries WHERE video_id = ? AND user_id = ?', 
-          [video.videoId, currentUser.id]
-        );
-
-        if (existingVideo.length === 0) {
-          console.log(`Processing new video: ${video.title} (${video.videoId})`);
-          
-          const transcript = await transcriptService.getVideoTranscript(video.videoId);
-          
-          // Insert video with user_id to ensure user isolation
-          await db.query(
-            'INSERT INTO video_summaries (user_id, video_id, channel_id, title, thumbnail, published_at, summary) VALUES (?, ?, ?, ?, ?, ?, NULL)',
-            [currentUser.id, video.videoId, video.channelId, video.title, video.thumbnail, video.publishedAt]
-          );
-          savedVideosCount++;
-
-          if (transcript) {
-            console.log(`Generating summary for ${video.title}...`);
-            const summary = await openaiService.generateSummary(transcript);
-            if (summary) {
-              await db.updateSummary(video.videoId, summary);
-              summarizedVideosCount++;
-              console.log(`Summary generated for ${video.title}`);
-            }
-          } else {
-            console.log(`No transcript available for ${video.title}`);
-          }
-        } else {
-          console.log(`Video ${video.title} already processed for this user`);
-        }
-      } catch (error) {
-        console.error(`Error processing video ${video.videoId}:`, error);
-      }
-    }
-
-    const message = `Video refresh completed. Saved ${savedVideosCount} new videos and generated ${summarizedVideosCount} new summaries from ${selectedChannels.length} selected channels.`;
-    console.log(message);
-    
-    res.json({ 
-      success: true, 
-      message,
-      channelsProcessed: selectedChannels.length,
-      videosFound: allNewVideos.length,
-      videosProcessed: videosToProcess.length,
-      newVideosSaved: savedVideosCount,
-      newSummariesGenerated: summarizedVideosCount
-    });
-  } catch (error) {
-    console.error('Error in /api/refresh-videos:', error);
-    res.status(500).json({ error: 'Failed to initiate video refresh process.' });
-  }
-});
-
-app.get('/api/dashboard', async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // Get user-specific video summaries
-    const videoSummaries = await db.getUserVideoSummaries(req.user.id, 20);
-    const userStats = await db.getUserVideoStats(req.user.id);
-    
-    console.log(`Dashboard request for user ${req.user.id}: ${videoSummaries.length} summaries found`);
-    
-    res.json({
-      summaries: videoSummaries,
-      stats: userStats,
-      user: {
-        id: req.user.id,
-        email: req.user.email,
-        name: req.user.name
-      }
-    });
-  } catch (error) {
-    console.error('Error in /api/dashboard:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
-  }
+app.get('/auth/logout', (req, res, next) => {
+  req.logout(function(err) {
+    if (err) { return next(err); }
+    res.redirect(process.env.CLIENT_URL || 'http://localhost:3000/');
+  });
 });
 
 app.get('/auth/status', (req, res) => {
@@ -415,26 +134,37 @@ app.get('/auth/status', (req, res) => {
   });
 });
 
-
-
-app.get('/auth/logout', (req, res, next) => {
-  req.logout(function(err) {
-    if (err) { return next(err); }
-    res.redirect(process.env.CLIENT_URL || 'http://localhost:3000/');
-  });
-});
-
-// Catch-all handler: send back React's index.html file for any non-API routes
-// This must be placed AFTER all API routes to avoid intercepting them
-app.get('*', (req, res) => {
-  const accept = req.headers.accept || '';
-  if (accept.includes('text/html')) {
-    res.setHeader('Cache-Control', 'no-store');
-    return renderIndexWithFreshAssets(req, res);
+// Other API routes
+app.get('/api/subscriptions', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    if (!req.user.access_token && !process.env.YOUTUBE_API_KEY) {
+      console.log('Skipping subscriptions fetch in demo mode without API key.');
+      return res.json([]);
+    }
+    const subscriptions = await youtubeService.getSubscriptions(req.user.access_token, req.user.refresh_token);
+    res.json(subscriptions);
+  } catch (error) {
+    console.error('Error fetching subscriptions:', error);
+    res.status(500).json({ error: 'Failed to fetch subscriptions' });
   }
-  res.status(404).send('Not found');
 });
 
+// ... other api routes ...
+
+// --- STATIC FILE SERVING ---
+// Must be after all API routes
+
+const buildDir = path.join(__dirname, 'client/dist');
+app.use(express.static(buildDir));
+
+// The "catchall" handler: for any request that doesn't match an API route,
+// send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(buildDir, 'index.html'));
+});
+
+const port = process.env.PORT || 5001;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
