@@ -1,30 +1,34 @@
-// Use environment variable or fallback to localhost for development
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE_URL =
+  import.meta?.env?.VITE_API_URL || process.env.REACT_APP_API_URL || '';
 
-const api = {
-  get: async (url) => {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-    const response = await fetch(fullUrl, { credentials: 'include' });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  },
-  post: async (url, data) => {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-    const response = await fetch(fullUrl, {
+async function parseJsonOrThrow(res) {
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(`Non JSON response ${res.status}: ${text.slice(0,120)}`);
+  }
+  return res.json();
+}
+
+export async function get(url) {
+  const res = await fetch(`${API_BASE_URL}${url}`, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseJsonOrThrow(res);
+}
+
+export async function post(url, data) {
+    const res = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       credentials: 'include',
       body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  },
-};
-
-export default api;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return parseJsonOrThrow(res);
+}

@@ -125,3 +125,4 @@ playwright-report/
 # Build outputs
 dist/
 # build/ - commented out to allow client/build for deployment
+.sandbox-worktree/

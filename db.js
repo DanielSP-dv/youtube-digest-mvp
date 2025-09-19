@@ -3,7 +3,14 @@ const path = require('path');
 
 const dbPath = (process.env.DATABASE_URL || 'file:database.sqlite').replace(/^file:/, '');
 console.log(`Attempting to connect to database at: ${dbPath}`);
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Database connection error:', err);
+    process.exit(1);
+  } else {
+    console.log('✅ Database connected successfully');
+  }
+});
 
 db.serialize(() => {
   db.run('PRAGMA foreign_keys = ON');
