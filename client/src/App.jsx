@@ -127,6 +127,4 @@ const AppWrapper = () => (
 
 export default AppWrapper;
 
-const Root = () => <Router><App /></Router>;
 
-export default Root;
