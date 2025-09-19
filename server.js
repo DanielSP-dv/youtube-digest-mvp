@@ -72,6 +72,7 @@ function renderIndexWithFreshAssets(req, res) {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Demo mode, skip sessions and OAuth
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
@@ -131,46 +132,13 @@ if (!DEMO_MODE) {
   });
 }
 
-// serve hashed assets with no fallthrough
-app.use(
-  '/static',
-  express.static(path.join(buildDir, 'static'), { fallthrough: false, maxAge: '1y', immutable: true })
-);
+app.use(express.static(path.join(__dirname, 'client/dist')));
 
-// serve index with no cache so clients always fetch the latest html
-app.get('/', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  renderIndexWithFreshAssets(req, res);
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
 });
-
-
-const db = require('./db');
-
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.CALLBACK_URL
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      let user = await db.findUserByGoogleId(profile.id);
-      if (!user) {
-        user = await db.createUser(profile.id, profile.emails[0].value, profile.displayName, accessToken, refreshToken);
-        console.log('Created new user:', user);
-      } else {
-        // Update existing user's tokens
-        await db.updateUserTokens(profile.id, accessToken, refreshToken);
-        // Re-fetch user to get updated tokens, or just update the user object in memory
-        user.access_token = accessToken;
-        user.refresh_token = refreshToken; // Update user object in memory
-        console.log('Found existing user, updated tokens:', user);
-      }
-      return done(null, user);
-    } catch (err) {
-      return done(err, null);
-    }
-  }
-));
 
 // Test route to verify server is working
 app.get('/test', (req, res) => {
@@ -229,7 +197,7 @@ app.get('/auth/google', passport.authenticate('google', {
 
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL }), (req, res) => {
   // Successful authentication, redirect to React frontend
-  res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+  res.redirect(process.env.CLIENT_URL);
 });
 
 // API routes

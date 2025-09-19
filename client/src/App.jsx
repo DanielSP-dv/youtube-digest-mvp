@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link, useLocation, useNavigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Channels from './pages/Channels';
@@ -92,29 +92,33 @@ function Navigation({ user, logout, login }) {
 
 function App() {
   const { user, loading, login, logout } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard');
+    }
+  }, [loading, user, navigate]);
+
+  if (loading) {
+    return <div className="loading-container">Loading...</div>;
+  }
 
   return (
-    <Router>
-      <div>
-        {/* Navigation is always present, but its internal state depends on user */}
-        <Navigation user={user} logout={logout} login={login} />
-        <main>
-          {/* While loading, show a loading indicator and nothing else */}
-          {loading ? (
-            <div className="loading-container">Loading...</div>
-          ) : (
-            /* Once loading is false, render routes based on user state */
-            <Routes>
-              <Route path="/" element={<Landing user={user} login={login} />} />
-              <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
-              <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
-              <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
-            </Routes>
-          )}
-        </main>
-      </div>
-    </Router>
+    <div>
+      <Navigation user={user} logout={logout} login={login} />
+      <main>
+        <Routes>
+          <Route path="/" element={<Landing user={user} login={login} />} />
+          <Route path="/dashboard" element={user ? <Dashboard /> : <Landing user={user} login={login} />} />
+          <Route path="/channels" element={user ? <Channels /> : <Landing user={user} login={login} />} />
+          <Route path="/saved" element={user ? <Saved /> : <Landing user={user} login={login} />} />
+        </Routes>
+      </main>
+    </div>
   );
 }
 
-export default App;
+const Root = () => <Router><App /></Router>;
+
+export default Root;
