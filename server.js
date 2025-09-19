@@ -34,6 +34,7 @@ const cors = require('cors');
 const youtubeService = require('./services/youtube');
 const transcriptService = require('./services/transcript');
 const openaiService = require('./services/openai');
+const db = require('./db');
 
 const app = express();
 app.set('trust proxy', 1); // Mandatory for Railway proxy
@@ -103,10 +104,7 @@ if (DEMO_MODE) {
   ));
 }
 
-const db = require('./db');
-
 // --- API ROUTES ---
-// Must be before the static file serving
 
 // Auth routes
 app.get('/auth/google', passport.authenticate('google', { 
@@ -134,7 +132,7 @@ app.get('/auth/status', (req, res) => {
   });
 });
 
-// Other API routes
+// App API routes
 app.get('/api/subscriptions', async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
@@ -150,16 +148,37 @@ app.get('/api/subscriptions', async (req, res) => {
   }
 });
 
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const videoSummaries = await db.getUserVideoSummaries(req.user.id, 20);
+    const userStats = await db.getUserVideoStats(req.user.id);
+    res.json({
+      summaries: videoSummaries,
+      stats: userStats,
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name
+      }
+    });
+  } catch (error) {
+    console.error('Error in /api/dashboard:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
 // ... other api routes ...
 
 // --- STATIC FILE SERVING ---
-// Must be after all API routes
+// This must be after all API routes
 
 const buildDir = path.join(__dirname, 'client/dist');
 app.use(express.static(buildDir));
 
-// The "catchall" handler: for any request that doesn't match an API route,
-// send back React's index.html file.
+// The "catchall" handler for SPA routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(buildDir, 'index.html'));
 });
