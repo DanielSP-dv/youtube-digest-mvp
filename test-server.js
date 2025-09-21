@@ -36,6 +36,37 @@ app.get('/auth/status', (req, res) => {
   });
 });
 
+// API routes
+app.get('/api/channels', (req, res) => {
+  res.json([
+    {
+      channel_id: 'demo_channel_1',
+      channel_name: 'Demo Channel 1',
+      channel_thumbnail: 'https://via.placeholder.com/88x88'
+    },
+    {
+      channel_id: 'demo_channel_2', 
+      channel_name: 'Demo Channel 2',
+      channel_thumbnail: 'https://via.placeholder.com/88x88'
+    }
+  ]);
+});
+
+app.get('/api/subscriptions', (req, res) => {
+  res.json([
+    {
+      channelId: 'demo_channel_1',
+      channelName: 'Demo Channel 1',
+      channelThumbnail: 'https://via.placeholder.com/88x88'
+    },
+    {
+      channelId: 'demo_channel_2',
+      channelName: 'Demo Channel 2', 
+      channelThumbnail: 'https://via.placeholder.com/88x88'
+    }
+  ]);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Test server running on http://localhost:${PORT}`);
