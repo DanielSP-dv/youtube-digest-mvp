@@ -104,10 +104,6 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
-
 app.get('/dashboard', (req, res) => {
   if (!req.user) {
     return res.redirect('/');
@@ -351,10 +347,6 @@ app.get('/auth/logout', (req, res, next) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
-
 // Production static serving
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'client/build')));
@@ -362,3 +354,7 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(__dirname, 'client/build/index.html'));
   });
 }
+
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
